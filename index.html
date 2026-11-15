@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APLAY</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#fff;--card:#fbf5f5;--tx:#1a0a0a;--mut:#7a5f5f;--ac:#8b0000;--ac2:#b91c1c;--bd:#ecd9d9}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#000;--card:#0e0e0e;--tx:#f5f5f5;--mut:#a3a3a3;--bd:#262626;--ac:#dc2626;--ac2:#991b1b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:Vazirmatn,Tahoma,system-ui,sans-serif}
+.logo{font-weight:800;font-size:28px;letter-spacing:2px;background:linear-gradient(90deg,var(--ac),var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent;direction:ltr}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;max-width:900px;margin:auto}
+main{max-width:900px;margin:auto;padding:0 14px 20px;display:grid;gap:14px}@media(min-width:800px){main{grid-template-columns:1.3fr 1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:16px}
+button,input{font:inherit;color:inherit}button{background:linear-gradient(90deg,var(--ac),var(--ac2));color:#fff;border:0;border-radius:12px;padding:10px 16px;cursor:pointer}
+button.g{background:none;color:var(--mut);border:1px solid var(--bd)}
+input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:4px 0}
+#auth{max-width:380px;margin:8vh auto;text-align:center}.mut{color:var(--mut);font-size:14px}
+#log{height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.m{padding:10px 14px;border-radius:16px;max-width:85%;line-height:1.8;white-space:pre-wrap}
+.u{align-self:flex-start;background:var(--ac);color:#fff}.a{align-self:flex-end;background:var(--bg);border:1px solid var(--bd)}
+.row{display:flex;gap:8px;margin-top:8px}.tr{padding:9px;border-radius:12px;cursor:pointer}.tr:hover,.tr.on{background:var(--bg)}.tr small{color:var(--mut)}
+audio{width:100%;margin-top:8px}.hide{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="logo">APLAY</div><button class="g hide" id="out">خروج</button></header>
+<section id="auth" class="card">
+  <h2>خوش اومدی 🎧</h2><p class="mut">وارد شو یا ثبت‌نام کن</p>
+  <input id="em" type="email" placeholder="ایمیل" dir="ltr"><input id="pw" type="password" placeholder="رمز (حداقل ۶ کاراکتر)" dir="ltr">
+  <div class="row"><button id="login" style="flex:1">ورود</button><button id="signup" class="g" style="flex:1">ثبت‌نام</button></div>
+  <p id="err" class="mut"></p>
+</section>
+<main id="app" class="hide">
+  <div class="card"><div id="log"></div>
+    <div class="row"><input id="msg" placeholder="مثلاً: بارونیه و تو ماشینم، آروم می‌خوام"><button id="send">ارسال</button></div></div>
+  <div class="card"><b>پلی‌لیست</b><div id="pl" class="mut" style="margin-top:8px">هنوز چیزی نچیدم.</div><audio id="au" controls class="hide"></audio></div>
+</main>
+<script>
+// ===== این دو مقدار را از Supabase (Project Settings → API) کپی کن =====
+const SUPABASE_URL = "https://hfxxhsfobtvkcdrcqfrj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ZsU1kby_LRUshG5lW0Tq7g_IqA-JrVX";
+// ====================================================================
+const $=id=>document.getElementById(id), sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let session=null,hist=[],tracks=[],list=[];
+const esc=s=>{const d=document.createElement("div");d.textContent=s;return d.innerHTML};
+function bubble(t,c){const d=document.createElement("div");d.className="m "+c;d.textContent=t;$("log").appendChild(d);$("log").scrollTop=1e9;return d}
+async function enter(s){
+  session=s;$("auth").classList.add("hide");$("app").classList.remove("hide");$("out").classList.remove("hide");
+  const {data}=await sb.from("tracks").select("*");tracks=data||[];
+  if(!$("log").children.length)bubble("سلام! بگو حال‌وهوات چطوره، هوا چطوره و کجایی تا برات پلی‌لیست بچینم.","a");
+}
+async function auth(kind){
+  $("err").textContent="";
+  const f=kind==="up"?sb.auth.signUp:sb.auth.signInWithPassword;
+  const {data,error}=await f.call(sb.auth,{email:$("em").value.trim(),password:$("pw").value});
+  if(error)return $("err").textContent=error.message;
+  if(data.session)enter(data.session);else $("err").textContent="ایمیل تأیید برات فرستاده شد. بعد از تأیید وارد شو.";
+}
+$("login").onclick=()=>auth("in");$("signup").onclick=()=>auth("up");
+$("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
+function play(i){
+  const t=list[i];if(!t)return;
+  document.querySelectorAll(".tr").forEach((e,j)=>e.classList.toggle("on",j===i));
+  const a=$("au");a.src=sb.storage.from("music").getPublicUrl(t.file_path).data.publicUrl;a.classList.remove("hide");a.play().catch(()=>{});a.onended=()=>play(i+1);
+}
+async function send(){
+  const text=$("msg").value.trim();if(!text)return;$("msg").value="";bubble(text,"u");const w=bubble("…","a");
+  try{
+    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({message:text,history:hist})});
+    const j=await r.json();w.textContent=j.reply||"…";
+    hist.push({role:"user",text},{role:"assistant",text:j.reply||""});
+    list=(j.ids||[]).map(id=>tracks.find(t=>t.id==id)).filter(Boolean);
+    $("pl").innerHTML=list.length?list.map((t,i)=>`<div class="tr" data-i="${i}"><b>${i+1}. ${esc(t.title)}</b><br><small>${esc(t.artist)}</small></div>`).join(""):"هنوز چیزی نچیدم.";
+    document.querySelectorAll(".tr").forEach(e=>e.onclick=()=>play(+e.dataset.i));
+    if(list.length)play(0);
+  }catch(e){w.textContent="مشکلی پیش اومد."}
+}
+$("send").onclick=send;$("msg").addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+sb.auth.getSession().then(({data})=>{if(data.session)enter(data.session)});
+</script>
+</body>
+</html>
