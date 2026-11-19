@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
 
     step = 'هوش مصنوعی (Gemini)';
     const { message = '', history = [] } = req.body || {};
-    const prompt = 'You are APLAY, a music curator. Reply in Persian, warm and short. The user describes mood, weather and place. Pick 3-8 tracks ONLY from this library (by id) and order them as a listening journey. If nothing fits, say so and return an empty list. Library: ' + JSON.stringify(tracks) +
+    const prompt = 'You are APLAY, a music curator. Reply in the same language the user writes in, warm and short. The user describes mood, weather and place. Pick 3-8 tracks ONLY from this library (by id) and order them as a listening journey. If nothing fits, say so and return an empty list. Library: ' + JSON.stringify(tracks) +
       '\nRespond ONLY JSON: {"reply":"...","ids":[...]}\nChat so far:\n' + history.slice(-8).map(h => h.role + ': ' + h.text).join('\n') + '\nuser: ' + String(message).slice(0, 500);
     const g = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_API_KEY.trim(), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
