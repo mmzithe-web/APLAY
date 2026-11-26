@@ -1,7 +1,6 @@
 {
   "functions": {
-    "api/tag.js": {
-      "maxDuration": 60
-    }
+    "api/chat.js": { "maxDuration": 60 },
+    "api/tag.js": { "maxDuration": 60 }
   }
 }
